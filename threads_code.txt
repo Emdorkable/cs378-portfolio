@@ -1,0 +1,50 @@
+			+--------------------+
+			|        CS 439      |
+			| PROJECT 1: THREADS |
+			|    CODE READING    |
+			+--------------------+
+
+
+1. In class, we discussed interrupt handlers, which are pieces of code that are
+executed on that receipt of an interrupt.  Where does Pintos define its
+interrupt handlers?  What function executes on the receipt of a timer interrupt?
+
+
+
+2. What synchronization tool is used to implement a condition variable?  A lock?
+
+
+
+3. When a thread blocks in a semaphore, to which blocking queue is it added?
+
+
+
+4. What does the comment above thread_block() say?
+
+Threads can be blocked using this function, essentially put to sleep, where they will not be scheduled again
+until it is awoken but thread_unblock(). It should be called with interrupts off.
+
+5. thread.h defines a struct thread.  struct thread is analogous to an OS data
+structure we studied in class.  Which one?
+
+
+
+6. Where are the members of struct thread initialized?
+
+
+
+7. What is the difference between thread_init() and init_thread()?
+
+
+
+8. In Pintos, there is a timer_ticks variable.  What is its purpose?  Where is
+it updated?
+
+
+
+9. What data is stored in struct lock? 
+
+
+
+i10. How do you find or set a thread’s priority? Why would you want to do that? 
+
