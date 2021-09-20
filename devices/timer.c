@@ -87,14 +87,48 @@ timer_elapsed (int64_t then)
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
+//TODO: wait w/o busy waiting
 void
 timer_sleep (int64_t ticks) 
-{
+{ 
+  /**
+   * Suspends execution of the calling thread until time has advanced by at least x timer ticks. 
+   * Unless the system is otherwise idle, the thread need not wake up after exactly x ticks. 
+   * Just put it on the ready queue after they have waited for the right amount of time
+   */ 
+
+  // All of us driving here
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
+  struct thread *curr = thread_current();
+  // incomplete type is not allowed error occurs when compiler detect 
+  // any identifier that is of known data type but definition of it’s is not seen fully
+  // enum intr_lvl old_status = intr_disable();
+
+  ASSERT (intr_get_level () == INTR_OFF);
+  //add thread to wait queue...
+  curr->status = THREAD_BLOCKED;
+
   while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  {
+    // random note idk:
+
+
+    // retrieve the running thread (thread_curr() or whatever its called)
+    // struct thread *cur = thread_current();
+    // change status of cur (to block)
+
+
+    // initialize a semaphore (since we've got a class that deals w that)
+    // ...stuff here.. ?
+    // 
+    // lock and stuff (holding until timer is up)
+    // ... more stuff here...?
+    // release and stuff (timer is up, stop waiting)
+    //intr_set_level (prev_status)
+  }
+  curr->status = THREAD_READY;
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
