@@ -24,6 +24,10 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
+// struct semaphore
+struct semaphore *isRunning;
+isRunning->value = 0;
+
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -109,9 +113,14 @@ timer_sleep (int64_t ticks)
   ASSERT (intr_get_level () == INTR_OFF);
   //add thread to wait queue...
   curr->status = THREAD_BLOCKED;
-
-  while (timer_elapsed (start) < ticks) 
+  //Emily is driving
+  while (timer_elapsed (start) < ticks || isRunning->value == 1) 
   {
+      // sleep in here
+  }
+  curr->status = THREAD_READY;
+}
+
     // random note idk:
 
 
@@ -127,9 +136,6 @@ timer_sleep (int64_t ticks)
     // ... more stuff here...?
     // release and stuff (timer is up, stop waiting)
     //intr_set_level (prev_status)
-  }
-  curr->status = THREAD_READY;
-}
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -207,6 +213,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  //Emily is driving
+  //semadown... call timer_sleep()... once we're done napping, we can semaup
+  sema_down(isRunning);
+  timer_sleep(ticks);
+  sema_up(isRunning);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
