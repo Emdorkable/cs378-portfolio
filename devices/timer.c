@@ -25,7 +25,7 @@ static int64_t ticks;
 static unsigned loops_per_tick;
 
 // struct semaphore
-struct semaphore *isBlocked;
+struct semaphore *isAwake;
 //unsigned int One = 1;;
 
 //isBlocked->value = 1;
@@ -99,7 +99,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 { 
-  sema_init(isBlocked, 1);
+  sema_init(isAwake, 1);
   sema_init(timer, 0);
   /**
    * Suspends execution of the calling thread until time has advanced by at least x timer ticks. 
@@ -108,19 +108,18 @@ timer_sleep (int64_t ticks)
    */ 
 
   // All of us driving here
-  timer -> value = ticks;
+  timer->value = ticks;
   int64_t start = timer_ticks ();
   
   struct thread *curr = thread_current ();
   ASSERT (intr_get_level () == INTR_ON);
   //DanThy is driving here
-  sema_down (isBlocked); //0 is true and 1 is false
+  sema_down (isAwake); //0 is true and 1 is false
   curr->status = THREAD_BLOCKED; //this causes thread to sleep. norman says 
   //this is right but we should do it a different way
   struct intr_frame *curr_interrupt;// probs not right
   timer_interrupt (curr_interrupt); //figure out what goes in here
   ASSERT (intr_get_level () == INTR_OFF);
-
 
   //we need to call timer_interrupt() and somehow sent the ticks needed to run? before the interrupt
   //ends. We also need to sema_up after it finishes interrupting. the loop is not here,
@@ -213,19 +212,19 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  //timer decrement as time goes by, timer_ticks() will increment as time goes on, 
+  // timer decrement as time goes by, timer_ticks() will increment as time goes on, 
   ticks++;
   thread_tick ();
   //args = NULL;
   //Emily is driving
   //semadown... call timer_sleep()... once we're done napping, we can semaup
   while (timer->value != 0) // timer goes down as ticks progress (increase... don't just loop.. make it one unit of tick) 
-  //call thread_ticks()???
+  // call thread_ticks()???
   {
     // does something here
     sema_down (timer); //time progresses
   }
-  sema_up (isBlocked); //not blocked anymore
+  sema_up (isAwake); //not blocked anymore
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
