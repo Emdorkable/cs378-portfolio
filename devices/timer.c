@@ -26,9 +26,12 @@ static int64_t ticks;
 static unsigned loops_per_tick;
 
 // struct semaphore
-struct semaphore *isAwake;
 
-struct semaphore *timer;
+
+/* List of processes in THREAD_BLOCKED state, that is, processes
+   that are waiting for an event/resource/interrupt to end.*/
+static struct list wait_list;
+
 
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
@@ -93,59 +96,43 @@ timer_elapsed (int64_t then)
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-//TODO: wait w/o busy waiting
+// TODO: wait w/o busy waiting
+// more specifically:
+    // make sema not NULL before entering init
+    //
 void
 timer_sleep (int64_t ticks) 
 { 
-  sema_init(isAwake, 1);
-  sema_init(timer, 0);
+  struct thread *curr = thread_current ();
+
   /**
    * Suspends execution of the calling thread until time has advanced by at least x timer ticks. 
    * Unless the system is otherwise idle, the thread need not wake up after exactly x ticks. 
    * Just put it on the ready queue after they have waited for the right amount of time
    */ 
 
-  // All of us driving here
-  timer->value = ticks;
+  // Initiate the thread
+  // Insert thread into wait list
+  list_init (&wait_list);
+  //struct thread *thr_e = list_entry (e, struct thread, elem);
+  list_insert(list_tail(&wait_list), curr->e);
   
+  // 0 is true and 1 is false 
+  //printf("Downing isAwake...\n");
+  sema_down(&curr->isAwake);
+  curr->timer.value = ticks;
+  int64_t then = timer_ticks();
   
-  struct thread *curr = thread_current ();
-  ASSERT (intr_get_level () == INTR_ON);
-  //DanThy is driving here
-  //0 is true and 1 is falsere
-  sema_down (isAwake);
-
   // Add thread to waiting list
-  struct list_elem *e;
-  struct thread *t = list_entry(e, struct thread, allelem);
-  list_push_back(wait_list, e);
-
+  while (curr->timer.value != timer_elapsed(then)) 
+  {
+    //printf("Downing timer...\n");
+    sema_down (&curr->timer); //time progresses
+  }
   struct intr_frame *curr_interrupt; // probs not right
   timer_interrupt (curr_interrupt);  //figure out what goes in here
-  ASSERT (intr_get_level () == INTR_OFF);
-
-  list_remove(e);
-
-  list_push_back(ready_list, e);
-
-  // Add thread to ready list
-
-
-  // we need to call timer_interrupt() and somehow sent the ticks needed to run? before the interrupt
-  // ends. We also need to sema_up after it finishes interrupting. the loop is not here,
-  // but in timer_interrupt() 
-
-  // incomplete type is not allowed error occurs when compiler detect 
-  // any identifier that is of known data type but definition of it’s is not seen fully
-  // enum intr_lvl old_status = intr_disable();
-  // intr_set_level (prev_status)
-  //add thread to wait queue...
 
   //READY Q
-
-
-  //Emily is driving
-  curr->status = THREAD_READY;
 }
     
 
@@ -224,20 +211,18 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+
+  struct thread *curr = thread_current();
+  
+  sema_init (&curr->isAwake, 0);
   //DanThy is driving here
   // timer decrement as time goes by, timer_ticks() will increment as time goes on, 
   ticks++;
-  //args = NULL;
   //Emily is driving
-  int64_t start = timer_ticks ();
+  //int64_t start = timer_ticks ();
   //semadown... call timer_sleep()... once we're done napping, we can semaup
-  while (timer->value != timer_elapsed (start)) // timer goes down as ticks progress (increase... don't just loop.. make it one unit of tick) 
-  {
-    //printf("%d \n", timer-> value);
-    // does something here
-    sema_down (timer); //time progresses
-  }
-  sema_up (isAwake); //not blocked anymore
+ 
+  sema_up (&curr->isAwake); 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <synch.h>
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -95,9 +97,9 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     /* Semeaphore used to mark when threads are sleeping */
-    struct semaphore *isAwake;
+    struct semaphore isAwake;
     /* Semeaphore used to keep a countdown timer */
-    struct semaphore *timer;
+    struct semaphore timer;
     /* list elem used to place in wait_list (timer.c)*/
 
     struct list_elem *e;
