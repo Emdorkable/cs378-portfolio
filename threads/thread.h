@@ -94,6 +94,14 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    /* Semeaphore used to mark when threads are sleeping */
+    struct semaphore *isAwake;
+    /* Semeaphore used to keep a countdown timer */
+    struct semaphore *timer;
+    /* list elem used to place in wait_list (timer.c)*/
+
+    struct list_elem *e;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -139,5 +147,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+
 
 #endif /* threads/thread.h */
