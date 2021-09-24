@@ -9,6 +9,7 @@
 #include "threads/thread.h"
 
 
+
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -44,6 +45,7 @@ static void real_time_delay (int64_t num, int32_t denom);
 void
 timer_init (void) 
 {
+  list_init(&wait_list);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -103,8 +105,6 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 { 
-  struct thread *curr = thread_current ();
-
   /**
    * Suspends execution of the calling thread until time has advanced by at least x timer ticks. 
    * Unless the system is otherwise idle, the thread need not wake up after exactly x ticks. 
@@ -112,27 +112,48 @@ timer_sleep (int64_t ticks)
    */ 
 
   // Initiate the thread
+  struct thread *curr = thread_current ();
+  //sema_down(&curr->isAwake);
   // Insert thread into wait list
   list_init (&wait_list);
   //struct thread *thr_e = list_entry (e, struct thread, elem);
-  list_insert(list_tail(&wait_list), curr->e);
-  
+  list_push_back(&wait_list, &curr->elem);
+  //list_insert(list_tail(&wait_list), &curr->elem);
   // 0 is true and 1 is false 
   //printf("Downing isAwake...\n");
-  sema_down(&curr->isAwake);
   curr->timer.value = ticks;
   int64_t then = timer_ticks();
-  
   // Add thread to waiting list
-  while (curr->timer.value != timer_elapsed(then)) 
+  //sema_down(&curr->isAwake);
+  //sema_down(&curr->isAwake);
+
+  while (curr->timer.value > -1) 
   {
     //printf("Downing timer...\n");
     sema_down (&curr->timer); //time progresses
+    struct intr_frame *curr_interrupt;
+    timer_interrupt (curr_interrupt); 
+   
   }
-  struct intr_frame *curr_interrupt; // probs not right
-  timer_interrupt (curr_interrupt);  //figure out what goes in here
 
-  //READY Q
+ 
+
+  sema_up(&curr->isAwake);
+
+  //sema_up(list_head(&wait_list)->next);
+
+  //printf("%s \n", curr -> tid);
+  //sema_up(&curr -> isAwake);
+  
+   // probs not right
+  //sema_up (&curr->timer); 
+   //list_remove(&curr -> elem);
+   //figure out what goes in here
+  
+  //run idle if the ready queue is empty!
+
+  //READY Q is moved with sema up
+  
 }
     
 
@@ -211,18 +232,10 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-
-  struct thread *curr = thread_current();
-  
-  sema_init (&curr->isAwake, 0);
   //DanThy is driving here
-  // timer decrement as time goes by, timer_ticks() will increment as time goes on, 
   ticks++;
-  //Emily is driving
-  //int64_t start = timer_ticks ();
-  //semadown... call timer_sleep()... once we're done napping, we can semaup
+  thread_tick();
  
-  sema_up (&curr->isAwake); 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
