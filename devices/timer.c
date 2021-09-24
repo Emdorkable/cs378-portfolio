@@ -1,3 +1,115 @@
+bulbasaur
+#6968
+tacOS
+
+Cosmic — Today at 3:52 PM
+Im prolly picking something up omw back to my dorm but I'll keep posted
+PrinCe_LoGic — Today at 5:29 PM
+Image
+@Cosmic
+What do I say
+bulbasaur — Today at 5:37 PM
+who is this?
+Cosmic — Today at 5:46 PM
+SAY YES
+JUST DO IT
+PrinCe_LoGic — Today at 5:58 PM
+alright, done
+so what's the move about food padilla
+Cosmic — Today at 6:03 PM
+I am at a food truck rn 6-6
+PrinCe_LoGic — Today at 6:03 PM
+oh ok nice
+what you gettimg
+bulbasaur — Today at 6:04 PM
+oh i forgot to tell yall
+but i got one more test working
+PrinCe_LoGic — Today at 6:05 PM
+whoa nice
+you're gonna have to catch us up to speed
+bulbasaur — Today at 6:05 PM
+i did like one thing
+which is change the while loop statement
+Cosmic — Today at 6:23 PM
+Yeye epic!
+Which test does it pass?
+Aside from alarm-zero
+bulbasaur — Today at 6:23 PM
+alarm negative
+its a temporary solution tho
+well kinda
+actually its not
+Cosmic — Today at 6:24 PM
+By that you mean we'd most likely keep that change you made?
+Bc I might head back go my dorm shortly
+bulbasaur — Today at 6:25 PM
+ahh okay yeah im just sitting at patton hall right now since its so nice outside
+Cosmic — Today at 6:32 PM
+WAIT DANTHY
+PrinCe_LoGic — Today at 6:53 PM
+I’m eating at kins now
+Cosmic — Today at 6:57 PM
+This might take longer than i expected I'll come over as soon as I'm ready
+PrinCe_LoGic — Today at 6:57 PM
+Wym this might take longer
+You been eating
+Cosmic — Today at 6:57 PM
+Im talking w the club people about semester plans T_T 
+PrinCe_LoGic — Today at 6:58 PM
+Quantum collective?
+bulbasaur — Today at 6:58 PM
+yeah she was meeting with them
+PrinCe_LoGic — Today at 7:00 PM
+Yo they had pull pork today
+Smacks 😫😋
+Cosmic — Today at 7:03 PM
+Omw!!
+Sorry for the lateness ahh
+PrinCe_LoGic — Today at 7:09 PM
+Wya
+bulbasaur — Today at 7:09 PM
+we are walking together
+PrinCe_LoGic — Today at 7:09 PM
+Where at
+bulbasaur — Today at 7:09 PM
+Welch
+PrinCe_LoGic — Today at 7:10 PM
+Tell me when you’re approaching kins:)
+bulbasaur — Today at 7:10 PM
+okay!
+bulbasaur — Today at 7:18 PM
+were here!
+bulbasaur — Today at 8:56 PM
+struct intr_frame *curr_interrupt;
+https://prod.liveshare.vsengsaas.visualstudio.com/join?E76E43B020C7C8D0CA6921B494FF88E6D30B
+Join my Visual Studio Live Share session
+Real-time collaborative development
+Image
+Cosmic — Today at 10:25 PM
+https://prod.liveshare.vsengsaas.visualstudio.com/join?758DC39A1766BC7641B895554B05438BE9E6
+Join my Visual Studio Live Share session
+Real-time collaborative development
+Image
+Cosmic — Today at 10:33 PM
+https://prod.liveshare.vsengsaas.visualstudio.com/join?758DC39A1766BC7641B895554B05438BE9E6
+Join my Visual Studio Live Share session
+Real-time collaborative development
+Image
+https://prod.liveshare.vsengsaas.visualstudio.com/join?279583D013F4ADE74718720B8A900A629801
+Join my Visual Studio Live Share session
+Real-time collaborative development
+Image
+Cosmic — Today at 11:01 PM
+#include "devices/timer.h"
+#include <debug.h>
+#include <inttypes.h>
+#include <round.h>
+#include <stdio.h>
+#include "devices/pit.h"
+Expand
+message.txt
+9 KB
+﻿
 #include "devices/timer.h"
 #include <debug.h>
 #include <inttypes.h>
@@ -115,30 +227,26 @@ timer_sleep (int64_t ticks)
   struct thread *curr = thread_current ();
   //sema_down(&curr->isAwake);
   // Insert thread into wait list
-  list_init (&wait_list);
   //struct thread *thr_e = list_entry (e, struct thread, elem);
   list_push_back(&wait_list, &curr->elem);
   //list_insert(list_tail(&wait_list), &curr->elem);
   // 0 is true and 1 is false 
   //printf("Downing isAwake...\n");
-  curr->timer.value = ticks;
-  int64_t then = timer_ticks();
+  curr->timer.value = ticks + timer_ticks();
   // Add thread to waiting list
   //sema_down(&curr->isAwake);
   //sema_down(&curr->isAwake);
 
-  while (curr->timer.value > -1) 
-  {
+  //while (curr->timer.value > -1) 
+  //{
     //printf("Downing timer...\n");
-    sema_down (&curr->timer); //time progresses
-    struct intr_frame *curr_interrupt;
-    timer_interrupt (curr_interrupt); 
+    //sema_down (&curr->timer); //time progresses
    
-  }
+  //}
 
- 
+ sema_down(&curr->timer);
 
-  sema_up(&curr->isAwake);
+  //sema_up(&curr->isAwake);
 
   //sema_up(list_head(&wait_list)->next);
 
@@ -232,9 +340,20 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  //DanThy is driving here
   ticks++;
   thread_tick();
+  //DanThy is driving here
+  if (!list_empty(&wait_list)) {
+    struct list_elem *curr_elem = list_begin(&wait_list);
+    while (list_next(curr_elem) != list_tail(&wait_list)) {
+      struct thread *curr_thread = list_entry(curr_elem, struct thread, elem);
+      if (curr_thread->timer.value <= timer_ticks()) { //??
+        sema_up(&curr_thread->timer);
+        list_remove(curr_elem);
+      }
+      curr_elem = list_next(curr_elem);
+    }
+  }
  
 }
 
