@@ -95,9 +95,10 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     struct semaphore isAwake;
     /* Semeaphore used to keep a countdown timer */
-    struct semaphore timer;
+    uint64_t timer;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    struct list_elem timerElem;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
