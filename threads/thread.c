@@ -94,10 +94,9 @@ thread_init (void)
 
   //makes sure that thread_current() won't be called
   
-  sema_down (&init_lock.semaphore);
+  //sema_down (&init_lock.semaphore);
   lock_init (&tid_lock);
   list_init (&ready_list);
-  //list_init (&wait_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -105,7 +104,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-  sema_up (&init_lock.semaphore);
+  //sema_up (&init_lock.semaphore);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -116,7 +115,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  lock_init (&init_lock);
+  //lock_init (&init_lock);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
@@ -180,6 +179,7 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
+  
 
   ASSERT (function != NULL);
 
@@ -210,7 +210,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  if (t->priority > thread_current()->priority)
+    thread_yield();
   return tid;
 }
 
@@ -268,7 +269,7 @@ struct thread *
 thread_current (void) 
 {
 
-  sema_down(&init_lock.semaphore);
+  //sema_down(&init_lock.semaphore);
   struct thread *t = running_thread ();
   
   /* Make sure T is really a thread.
