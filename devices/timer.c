@@ -207,6 +207,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
       struct thread *curr_thread = list_entry (curr_elem, struct thread, 
       timerElem); 
       // Emily Drove here
+      /**
+       * TODO: thoughts - wake up highest priority first (even if it isn't 
+       * the first to wake up) (??) ((this is for priority-sema and priority-condVar))
+       */
       if (curr_thread->timer <= timer_ticks())
       {
         //removes if timer has passed 
