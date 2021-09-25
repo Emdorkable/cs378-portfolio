@@ -98,57 +98,20 @@ timer_elapsed (int64_t then)
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-// TODO: wait w/o busy waiting
-// more specifically:
-    // make sema not NULL before entering init
-    //
 void
 timer_sleep (int64_t ticks) 
 { 
-  /**
-   * Suspends execution of the calling thread until time has advanced by at least x timer ticks. 
-   * Unless the system is otherwise idle, the thread need not wake up after exactly x ticks. 
-   * Just put it on the ready queue after they have waited for the right amount of time
-   */ 
+  //DanThy is Driving here
+  //test for negative ticks
+  if (ticks <  0)
+    return;
 
   // Initiate the thread
   struct thread *curr = thread_current ();
-  //sema_down(&curr->isAwake);
-  // Insert thread into wait list
-  //struct thread *thr_e = list_entry (e, struct thread, elem);
-  list_push_back(&wait_list, &curr->elem);
-  //list_insert(list_tail(&wait_list), &curr->elem);
-  // 0 is true and 1 is false 
-  //printf("Downing isAwake...\n");
-  curr->timer.value = ticks + timer_ticks();
-  // Add thread to waiting list
-  //sema_down(&curr->isAwake);
-  //sema_down(&curr->isAwake);
-
-  //while (curr->timer.value > -1) 
-  //{
-    //printf("Downing timer...\n");
-    //sema_down (&curr->timer); //time progresses
-   
-  //}
-
- sema_down(&curr->timer);
-
-  //sema_up(&curr->isAwake);
-
-  //sema_up(list_head(&wait_list)->next);
-
-  //printf("%s \n", curr -> tid);
-  //sema_up(&curr -> isAwake);
-  
-   // probs not right
-  //sema_up (&curr->timer); 
-   //list_remove(&curr -> elem);
-   //figure out what goes in here
-  
-  //run idle if the ready queue is empty!
-
-  //READY Q is moved with sema up
+  list_push_back (&wait_list, &curr->timerElem);
+  curr->timer = ticks + timer_ticks ();
+  // Sleeps the thread
+  sema_down (&curr->isAwake);
   
 }
     
@@ -228,21 +191,33 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  //increases ticks
+  thread_tick ();
   ticks++;
-  thread_tick();
+  
   //DanThy is driving here
-  if (!list_empty(&wait_list)) {
-    struct list_elem *curr_elem = list_begin(&wait_list);
-    while (list_next(curr_elem) != list_tail(&wait_list)) {
-      struct thread *curr_thread = list_entry(curr_elem, struct thread, elem);
-      if (curr_thread->timer.value <= timer_ticks()) { //??
-        sema_up(&curr_thread->timer);
-        list_remove(curr_elem);
+  //checks if list is empty
+  if (!list_empty (&wait_list)) {
+    struct list_elem *curr_elem; 
+
+    //loops through list and checks if any have surpassed timer
+    for (curr_elem = list_begin (&wait_list); curr_elem != list_end 
+    (&wait_list); curr_elem = list_next (curr_elem))
+    {
+      struct thread *curr_thread = list_entry (curr_elem, struct thread, timerElem); 
+      // Emily Drove here
+      if (curr_thread->timer <= timer_ticks())
+      {
+        //removes if timer has passed 
+        list_remove (curr_elem); 
+        sema_up (&curr_thread->isAwake);
+        if (curr_elem == list_end (&wait_list)) {
+          break;
+        }
       }
-      curr_elem = list_next(curr_elem);
     }
   }
- 
+  
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
