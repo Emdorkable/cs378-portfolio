@@ -37,6 +37,9 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+/* Lock used by thread_init(). */
+static struct lock init_lock;
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -89,6 +92,9 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
+  //makes sure that thread_current() won't be called
+  
+  sema_down (&init_lock.semaphore);
   lock_init (&tid_lock);
   list_init (&ready_list);
   //list_init (&wait_list);
@@ -99,6 +105,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  sema_up (&init_lock.semaphore);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -109,6 +116,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
+  lock_init (&init_lock);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
@@ -243,6 +251,7 @@ thread_unblock (struct thread *t)
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
+  
 }
 
 /* Returns the name of the running thread. */
@@ -258,6 +267,8 @@ thread_name (void)
 struct thread *
 thread_current (void) 
 {
+
+  sema_down(&init_lock.semaphore);
   struct thread *t = running_thread ();
   
   /* Make sure T is really a thread.
@@ -467,7 +478,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   sema_init(&t->isAwake,0);
-  sema_init(&t->timer,0);
 
   old_level = intr_disable();
   list_push_back (&all_list, &t->allelem);
@@ -497,8 +507,30 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else {
+
+    // DanThy drove here
+    struct list_elem *current_elem;
+    struct list_elem *highest_elem = list_begin (&ready_list);
+    struct thread *highThread = list_entry (list_begin (&ready_list),
+    struct thread, elem);
+
+    // Josiah drove here
+    for (current_elem = list_begin (&ready_list); current_elem != list_end 
+    (&ready_list); current_elem = list_next (current_elem))
+      {
+        struct thread *f = list_entry (current_elem, struct thread, elem);
+        if (highThread->priority < f->priority) 
+        {
+          highThread = f;
+          highThread->priority = f->priority;
+          highest_elem = current_elem;
+        }
+      }
+      // Emily drove here  
+      list_remove(highest_elem);
+      return highThread;
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page

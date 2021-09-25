@@ -204,7 +204,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
     for (curr_elem = list_begin (&wait_list); curr_elem != list_end 
     (&wait_list); curr_elem = list_next (curr_elem))
     {
-      struct thread *curr_thread = list_entry (curr_elem, struct thread, timerElem); 
+      struct thread *curr_thread = list_entry (curr_elem, struct thread, 
+      timerElem); 
       // Emily Drove here
       if (curr_thread->timer <= timer_ticks())
       {
