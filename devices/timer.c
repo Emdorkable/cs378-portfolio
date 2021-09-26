@@ -8,8 +8,6 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
-
-
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -96,6 +94,17 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+
+static bool
+sort_priority(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED)
+{
+
+ const struct thread *first_thread = list_entry(first, const struct thread, elem);
+ const struct thread *second_thread = list_entry(second, const struct thread, elem);
+ return first_thread -> priority >= second_thread -> priority; 
+ 
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
@@ -107,8 +116,13 @@ timer_sleep (int64_t ticks)
     return;
 
   // Initiate the thread
+
   struct thread *curr = thread_current ();
-  list_push_back (&wait_list, &curr->timerElem);
+  list_insert_ordered (&wait_list, &(curr->timerElem),
+                     &sort_priority, curr->priority);
+  //how to use sort_priority?
+  //list_push_back (&wait_list, &curr->timerElem);
+  
   curr->timer = ticks + timer_ticks ();
   // Sleeps the thread
   sema_down (&curr->isAwake);
@@ -211,7 +225,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
        * TODO: thoughts - wake up highest priority first (even if it isn't 
        * the first to wake up) (??) ((this is for priority-sema and priority-condVar))
        */
-      if (curr_thread->timer <= timer_ticks())
+      if ((int64_t) curr_thread->timer <= timer_ticks())
       {
         //removes if timer has passed 
         list_remove (curr_elem); 
