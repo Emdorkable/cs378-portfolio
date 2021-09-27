@@ -96,8 +96,10 @@ thread_init (void)
   
   //sema_down (&init_lock.semaphore);
   lock_init (&tid_lock);
+  
   list_init (&ready_list);
   list_init (&all_list);
+
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -376,6 +378,7 @@ thread_set_priority (int new_priority)
   old_level = intr_disable();
   struct thread *next_thread = list_entry (list_begin(&ready_list), struct thread, elem);
   thread_current ()->priority = new_priority;
+  thread_current ()->orig_priority = new_priority;
   if (thread_current ()->priority < next_thread->priority) {
     thread_yield ();
   }
@@ -510,7 +513,8 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->prev_priority = -1;
+  t->orig_priority = priority; //maybe?
+  lock_init (&t->neededLock);
   t->magic = THREAD_MAGIC;
   sema_init(&t->isAwake,0);
 
