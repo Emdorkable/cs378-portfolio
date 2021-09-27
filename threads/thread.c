@@ -513,10 +513,11 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->orig_priority = priority; //maybe?
+  t->orig_priority = priority;
   lock_init (&t->neededLock);
   t->magic = THREAD_MAGIC;
-  sema_init(&t->isAwake,0);
+  list_init(&t -> all_locks_held);
+  sema_init(&t->is_awake,0);
 
   old_level = intr_disable();
   list_push_back (&all_list, &t->allelem);

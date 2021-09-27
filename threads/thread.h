@@ -94,7 +94,7 @@ struct thread
     int priority;                       /* Priority. */
     int orig_priority;                  /* the Previous Priority */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct semaphore isAwake;
+    struct semaphore is_awake;
     /* Semeaphore used to keep a countdown timer */
     uint64_t timer;
     /* Shared between thread.c and synch.c. */
@@ -102,7 +102,8 @@ struct thread
     struct list_elem timerElem;
 
     struct lock neededLock;  /*lock that is needed*/
-    
+    struct list all_locks_held;
+
 
 
 #ifdef USERPROG

@@ -125,7 +125,7 @@ timer_sleep (int64_t ticks)
   
   curr->timer = ticks + timer_ticks ();
   // Sleeps the thread
-  sema_down (&curr->isAwake);
+  sema_down (&curr->is_awake);
   
 }
     
@@ -229,7 +229,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
       {
         //removes if timer has passed 
         list_remove (curr_elem); 
-        sema_up (&curr_thread->isAwake);
+        sema_up (&curr_thread->is_awake);
         if (curr_elem == list_end (&wait_list)) {
           break;
         }

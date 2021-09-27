@@ -193,7 +193,7 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
-  lock->is_real = 0;
+  lock->is_not_null = 0;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -215,18 +215,21 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable();
   
 
-  if (lock->holder != NULL) //original code 6/18 
-  {
-    struct thread *low_lock = lock->holder;
-    low_lock->priority = thread_get_priority();
-    thread_yield();
+  // if (lock->holder != NULL) //original code 6/18 
+  // {
+  //   struct thread *low_lock = lock->holder;
+  //   low_lock->priority = thread_get_priority();
+  //   thread_yield();
+  // }
+
+
+  // DanThy and Emily are driving here
+  if (lock -> holder != NULL && lock->holder->priority < thread_current() ->priority){
+    thread_current() -> neededLock = *lock;
+    thread_current() -> neededLock.is_not_null = 1;
+    next_lock_needed(&lock -> holder);
   }
 
-
-  //DanThy and Emily are driving here
-
-
-  
 
 //  if (lock->holder != NULL)
 //  {
@@ -234,7 +237,7 @@ lock_acquire (struct lock *lock)
 //  }
 //   // check if the lock -> holder is waiting for another lock
 //   thread_current() -> neededLock = *lock;
-//   thread_current() -> neededLock.is_real = 1;
+//   thread_current() -> neededLock.is_not_null = 1;
 //   //run that first
 //   //keep looping -> recursion???
 //   struct thread *low_lock = lock->holder; 
@@ -244,25 +247,43 @@ lock_acquire (struct lock *lock)
 
   //stop don't yield yet, check if the lock -> holder -> neededLock is not null
 
-  //do the loop over
-  thread_yield();//original code
-  sema_down (&lock->semaphore); //original code
+  thread_yield();// original code
+  sema_down (&lock->semaphore); // original code
+  /* 
+    
+
+    //list_remove (old_thread-)
+    <code to remove this lock from old_thread's list>
+  */
+
   lock -> holder = thread_current (); //original code
-  //thread_current() -> neededLock.is_real = 0;
+
+  /*
+  add lock to thread_current's list
+  */
+  list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem);
+
+  thread_current() -> neededLock.is_not_null = 0;
   intr_set_level (old_level); //original code
 }
 
-
+//make comments about this method
 static void
 next_lock_needed(struct lock *lock){
-    struct thread *low_lock = lock->holder; 
-    low_lock->priority = thread_current ()->priority;
-    if (&lock -> holder -> neededLock.is_real == 1) {
+
+    if (&lock -> holder -> neededLock.is_not_null == 1) {
       next_lock_needed(&lock -> holder -> neededLock);
     }
-    else {
-      return;
-    }
+    //donate priority
+    struct thread *low_lock = lock->holder; 
+    low_lock->priority = thread_get_priority();
+    return;
+    
+    //checks if the thread that holds the lock needs a lock
+    
+    // else {
+    //   return;
+    // }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -281,7 +302,14 @@ lock_try_acquire (struct lock *lock)
 
   success = sema_try_down (&lock->semaphore);
   if (success)
+  /*
+  check if lock->holder is an existing thread
+  */
     lock->holder = thread_current ();
+    //list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem);
+    /*
+    add lock to thread_current's list
+    */
   return success;
 }
 
@@ -295,11 +323,21 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
   lock->holder = NULL;
+
+
+  list_remove (&lock -> lock_elem);
+
   if (thread_current ()->orig_priority != thread_current() -> priority) {
-    thread_current ()->priority = thread_current ()->orig_priority;
+    //checks if there were other donations made
+    if (list_empty(&thread_current() -> all_locks_held)){
+      thread_current ()->priority = thread_current ()->orig_priority;
+    }
+    else {
+      // do nothing because it needs to keep releaseing locks from the thread
+    }
   }
+  //thread_current() -> priority = thread_current() -> orig_priority;
   sema_up (&lock->semaphore);
 }
 
