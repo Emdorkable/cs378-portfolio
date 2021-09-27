@@ -92,6 +92,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int prev_priority;                  /* Priority */
     struct list_elem allelem;           /* List element for all threads list. */
     struct semaphore isAwake;
     /* Semeaphore used to keep a countdown timer */

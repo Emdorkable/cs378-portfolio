@@ -510,6 +510,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->prev_priority = -1;
   t->magic = THREAD_MAGIC;
   sema_init(&t->isAwake,0);
 
@@ -541,32 +542,9 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else {
-/*
-    // DanThy drove here
-    struct list_elem *current_elem;
-    struct list_elem *highest_elem = list_begin (&ready_list);
-    struct thread *highThread = list_entry (list_begin (&ready_list),
-    struct thread, elem);
-
-    // Josiah drove here
-    for (current_elem = list_begin (&ready_list); current_elem != list_end 
-    (&ready_list); current_elem = list_next (current_elem))
-      {
-        struct thread *f = list_entry (current_elem, struct thread, elem);
-        if (highThread->priority < f->priority) 
-        {
-          highThread = f;
-          highThread->priority = f->priority;
-          highest_elem = current_elem;
-        }
-      }
-      // Emily drove here  
-      list_remove(highest_elem);
-      return highThread; 
-      */
-      //list_sort (&ready_list, sort_priority, NULL);
-      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else 
+  {
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
