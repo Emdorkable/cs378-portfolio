@@ -101,6 +101,8 @@ struct thread
     struct list_elem elem;              /* List element. */
     struct list_elem timerElem;
 
+    int current_dono; /*boolean checking if in current donation mode*/
+
     struct lock neededLock;  /*lock that is needed*/
     struct list all_locks_held;
 

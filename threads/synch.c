@@ -222,15 +222,12 @@ lock_acquire (struct lock *lock)
   //   thread_yield();
   // }
 
-
   // DanThy and Emily are driving here
   if (lock -> holder != NULL && lock->holder->priority < thread_current() ->priority){
     thread_current() -> neededLock = *lock;
     thread_current() -> neededLock.is_not_null = 1;
     next_lock_needed(&lock -> holder);
   }
-
-
 //  if (lock->holder != NULL)
 //  {
 //    next_lock_needed(&lock -> holder -> neededLock);
@@ -249,9 +246,7 @@ lock_acquire (struct lock *lock)
 
   thread_yield();// original code
   sema_down (&lock->semaphore); // original code
-  /* 
-    
-
+  /*
     //list_remove (old_thread-)
     <code to remove this lock from old_thread's list>
   */
@@ -264,7 +259,7 @@ lock_acquire (struct lock *lock)
   list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem);
 
   thread_current() -> neededLock.is_not_null = 0;
-  intr_set_level (old_level); //original code
+  intr_set_level (old_level);  //original code
 }
 
 //make comments about this method
@@ -274,8 +269,10 @@ next_lock_needed(struct lock *lock){
     if (&lock -> holder -> neededLock.is_not_null == 1) {
       next_lock_needed(&lock -> holder -> neededLock);
     }
-    //donate priority
-    struct thread *low_lock = lock->holder; 
+    // donate priority
+    struct thread *low_lock = lock->holder;
+    // Turn on donation mode
+    thread_current ()->current_dono = 1;
     low_lock->priority = thread_get_priority();
     return;
     
@@ -324,17 +321,20 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   lock->holder = NULL;
-
-
   list_remove (&lock -> lock_elem);
+  // Turn off donation mode
 
+  thread_current ()->current_dono = 0;
+  
   if (thread_current ()->orig_priority != thread_current() -> priority) {
     //checks if there were other donations made
     if (list_empty(&thread_current() -> all_locks_held)){
       thread_current ()->priority = thread_current ()->orig_priority;
+      
     }
     else {
       // do nothing because it needs to keep releaseing locks from the thread
+      
     }
   }
   //thread_current() -> priority = thread_current() -> orig_priority;

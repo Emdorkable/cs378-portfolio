@@ -375,14 +375,22 @@ void
 thread_set_priority (int new_priority) 
 {
   enum intr_level old_level;
-  old_level = intr_disable();
-  struct thread *next_thread = list_entry (list_begin(&ready_list), struct thread, elem);
-  thread_current ()->priority = new_priority;
+  // Turn off donation mode
+  old_level = intr_disable ();
+  struct thread *next_thread = list_entry 
+  (list_begin (&ready_list), struct thread, elem);
+  //checks donation mode
+  if (thread_current()->current_dono != 1)
+  {
+    thread_current ()->priority = new_priority;
+  }
+  //sets original priority to the new priority
   thread_current ()->orig_priority = new_priority;
-  if (thread_current ()->priority < next_thread->priority) {
+  if (thread_current ()->priority < next_thread->priority) 
+  {
     thread_yield ();
   }
-  intr_set_level(old_level);
+  intr_set_level (old_level);
 }
 
 
@@ -391,8 +399,8 @@ int
 thread_get_priority (void) 
 {
   enum intr_level old_level;
-  old_level = intr_disable();
-  intr_set_level(old_level);
+  old_level = intr_disable ();
+  intr_set_level (old_level);
   return thread_current ()->priority;
 }
 
@@ -517,7 +525,8 @@ init_thread (struct thread *t, const char *name, int priority)
   lock_init (&t->neededLock);
   t->magic = THREAD_MAGIC;
   list_init(&t -> all_locks_held);
-  sema_init(&t->is_awake,0);
+  sema_init(&t->is_awake, 0);
+  t->current_dono = 0;
 
   old_level = intr_disable();
   list_push_back (&all_list, &t->allelem);
