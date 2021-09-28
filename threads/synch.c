@@ -59,6 +59,14 @@ sort_priority(const struct list_elem *first, const struct list_elem *second, voi
  return first_thread -> priority > second_thread -> priority; 
 }
 
+/* Comparator that returns whether or not the lock is greater 
+   than the second lock */
+static bool
+sort_lock_priority (const struct list_elem *first, const struct list_elem *second, void *aux UNUSED)
+{
+  return list_entry(first, struct lock, lock_elem)->priority > 
+         list_entry(second, struct lock, lock_elem)->priority;
+}
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
@@ -193,6 +201,7 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  lock->priority = PRI_DEFAULT;
   lock->is_not_null = 0;
 }
 
@@ -212,68 +221,61 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock)); 
 
   enum intr_level old_level;
-  old_level = intr_disable();
+  old_level = intr_disable ();
+  struct thread *t_curr = thread_current ();
   
+  /*
+     ORIGINAL CODE:
+      if (lock->holder != NULL) 
+      {
+        struct thread *low_lock = lock->holder;
+        low_lock->priority = thread_get_priority();
+        thread_yield();
+      }
+  */
 
-  // if (lock->holder != NULL) //original code 6/18 
-  // {
-  //   struct thread *low_lock = lock->holder;
-  //   low_lock->priority = thread_get_priority();
-  //   thread_yield();
-  // }
+  /* If the lock doesn't have a holder, then this thread will be
+     its holder, so set the lock's priority to reflect this. */
+  if (!lock->holder)
+    lock->priority = t_curr->priority;
 
   // DanThy and Emily are driving here
-  if (lock -> holder != NULL && lock->holder->priority < thread_current() ->priority){
-    thread_current() -> neededLock = *lock;
-    thread_current() -> neededLock.is_not_null = 1;
+  if (lock->holder != NULL && lock->holder->priority < t_curr->priority){
+    t_curr->neededLock = *lock;
+    t_curr->neededLock.is_not_null = 1;
     /* TODO: so do you pass in the lock's holder or the lock itself??
        next_lock_needed() takes in a lock struct, not a thread struct...(?)
        not sure who passed in the holder lols. */
-    next_lock_needed(&lock -> holder);
+    next_lock_needed (lock);
+    /* If the curr thread priority has increased, set it to reflect change */
+    if (lock->priority < t_curr->priority)
+      lock->priority = t_curr->priority;
   }
-//  if (lock->holder != NULL)
-//  {
-//    next_lock_needed(&lock -> holder -> neededLock);
-//  }
-//   // check if the lock -> holder is waiting for another lock
-//   thread_current() -> neededLock = *lock;
-//   thread_current() -> neededLock.is_not_null = 1;
-//   //run that first
-//   //keep looping -> recursion???
-//   struct thread *low_lock = lock->holder; 
-//   //low_lock->orig_priority = low_lock->priority;
-    
-//   low_lock->priority = thread_current ()->priority; //assigns priority correctly?
 
-  //stop don't yield yet, check if the lock -> holder -> neededLock is not null
-
-  thread_yield();// original code
+  /* I think you *would* want to yield here, since after potentially 
+     having donated the thread's priority, you want to move on to the next one
+     priority-donate-nest fail MAYBE has to do with how same priority threads are in list?? */
+  thread_yield (); // original code
   sema_down (&lock->semaphore); // original code
-  /*
-    //list_remove (old_thread-)
-    <code to remove this lock from old_thread's list>
-  */
+  lock->holder = t_curr; //original code
 
-  lock -> holder = thread_current (); //original code
+  /* Add lock to thread_current's list in lock priority order */
+  // list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem); // Previous 
+  list_insert_ordered(&(t_curr->all_locks_held), &(lock->lock_elem), sort_lock_priority, NULL);
 
-  /*
-  add lock to thread_current's list
-  */
-  list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem);
-
-  thread_current() -> neededLock.is_not_null = 0;
+  t_curr->neededLock.is_not_null = 0;
   intr_set_level (old_level);  //original code
 }
 
 static void
-next_lock_needed(struct lock *lock){
+next_lock_needed(struct lock *lock) {
     /* Go down the rabbithole and get to the thread that is not 
        waiting on any lock. NOTE: if you don't leave the if statement
        as is, because technically you don't need to
-       have it == 1, since C considers anything != 1 as false, it 
+       have it == 1, since C considers anything != 0 as true, it 
        messes up and causes an infinite loop. */
     if (&lock->holder->neededLock.is_not_null == 1) {
-      next_lock_needed (&lock -> holder -> neededLock);
+      next_lock_needed (&lock->holder->neededLock);
     }
     // This should be the next lowest lock holder.
     struct thread *low_lock = lock->holder;
@@ -282,12 +284,6 @@ next_lock_needed(struct lock *lock){
     // Set this lock holder's priority to curr thread's priority.
     low_lock->priority = thread_get_priority();
     return;
-    
-    //checks if the thread that holds the lock needs a lock
-    
-    // else {
-    //   return;
-    // }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -327,24 +323,27 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  struct thread *t_curr = thread_current ();
   lock->holder = NULL;
-  list_remove (&lock -> lock_elem);
-  // Turn off donation mode
-
-  thread_current ()->current_dono = 0;
+  // Remove the lock from list of locks held from thread.
+  list_remove (&lock->lock_elem);
+  // Turn off donation mode.
+  t_curr->current_dono = 0;
   
-  if (thread_current ()->orig_priority != thread_current() -> priority) {
-    //checks if there were other donations made
-    if (list_empty(&thread_current() -> all_locks_held)){
-      thread_current ()->priority = thread_current ()->orig_priority;
-      
-    }
+  // If the curr thread has been donated priority...
+  if (t_curr->orig_priority != t_curr->priority) {
+    // Check if there were other donations made.
+    if (list_empty (&(t_curr->all_locks_held)))
+      t_curr->priority = t_curr->orig_priority;
     else {
-      // do nothing because it needs to keep releaseing locks from the thread
-      
+      /* It needs to return to its previous donated priority, set it to
+         the next highest lock holder priority */
+      list_sort(&(t_curr->all_locks_held), sort_lock_priority, NULL);
+      struct lock *next_highest_lock = list_entry(list_front(&(t_curr->all_locks_held)), struct lock, lock_elem);
+      t_curr->priority = next_highest_lock->priority;
     }
+    // Otherwise do nothing because it needs to keep releasing locks from the thread 
   }
-  //thread_current() -> priority = thread_current() -> orig_priority;
   sema_up (&lock->semaphore);
 }
 

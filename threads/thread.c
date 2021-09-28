@@ -218,8 +218,11 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   old_level = intr_disable();
+
+  /* Yield CPU to newly created thread if it has higher priority. */
   if (t->priority > thread_current()->priority)
     thread_yield();
+
   intr_set_level (old_level);
   return tid;
 }
@@ -525,7 +528,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->orig_priority = priority;
   lock_init (&t->neededLock);
   t->magic = THREAD_MAGIC;
-  list_init(&t -> all_locks_held);
+  list_init(&t->all_locks_held);
   sema_init(&t->is_awake, 0);
   t->current_dono = 0;
 

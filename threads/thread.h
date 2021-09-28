@@ -94,18 +94,18 @@ struct thread
     int priority;                       /* Priority. */
     int orig_priority;                  /* the Previous Priority */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct semaphore is_awake;
-    /* Semeaphore used to keep a countdown timer */
-    uint64_t timer;
+    struct semaphore is_awake; 
+    uint64_t timer;                     /* Used to keep a countdown timer */                    
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem timerElem;
 
-    int current_dono; /*boolean checking if in current donation mode*/
+    int current_dono;                  /* Sets donation status */
 
     /* Needed for priority donation */
-    struct lock neededLock;  /*lock that is needed*/
-    struct list all_locks_held;
+    struct lock neededLock;            /* Lock that is needed */
+    struct list all_locks_held;        /* Holds all locks held by thread */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
