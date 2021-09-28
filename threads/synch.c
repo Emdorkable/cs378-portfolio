@@ -268,8 +268,11 @@ lock_acquire (struct lock *lock)
 static void
 next_lock_needed(struct lock *lock){
     /* Go down the rabbithole and get to the thread that is not 
-       waiting on any lock */
-    if (&lock -> holder -> neededLock.is_not_null) {
+       waiting on any lock. NOTE: if you don't leave the if statement
+       as is, because technically you don't need to
+       have it == 1, since C considers anything != 1 as false, it 
+       messes up and causes an infinite loop. */
+    if (&lock->holder->neededLock.is_not_null == 1) {
       next_lock_needed (&lock -> holder -> neededLock);
     }
     // This should be the next lowest lock holder.
