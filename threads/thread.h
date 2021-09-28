@@ -103,10 +103,9 @@ struct thread
 
     int current_dono; /*boolean checking if in current donation mode*/
 
+    /* Needed for priority donation */
     struct lock neededLock;  /*lock that is needed*/
     struct list all_locks_held;
-
-
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

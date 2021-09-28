@@ -379,13 +379,14 @@ thread_set_priority (int new_priority)
   old_level = intr_disable ();
   struct thread *next_thread = list_entry 
   (list_begin (&ready_list), struct thread, elem);
-  //checks donation mode
-  if (thread_current()->current_dono != 1)
+  // Set curr thread priority to the new one if it is not in donation mode.
+  if (!thread_current ()->current_dono)
   {
     thread_current ()->priority = new_priority;
   }
   //sets original priority to the new priority
   thread_current ()->orig_priority = new_priority;
+  // If curr thread new priority is less than next thread, yield.
   if (thread_current ()->priority < next_thread->priority) 
   {
     thread_yield ();

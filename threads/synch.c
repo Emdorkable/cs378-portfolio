@@ -226,6 +226,9 @@ lock_acquire (struct lock *lock)
   if (lock -> holder != NULL && lock->holder->priority < thread_current() ->priority){
     thread_current() -> neededLock = *lock;
     thread_current() -> neededLock.is_not_null = 1;
+    /* TODO: so do you pass in the lock's holder or the lock itself??
+       next_lock_needed() takes in a lock struct, not a thread struct...(?)
+       not sure who passed in the holder lols. */
     next_lock_needed(&lock -> holder);
   }
 //  if (lock->holder != NULL)
@@ -262,17 +265,18 @@ lock_acquire (struct lock *lock)
   intr_set_level (old_level);  //original code
 }
 
-//make comments about this method
 static void
 next_lock_needed(struct lock *lock){
-
-    if (&lock -> holder -> neededLock.is_not_null == 1) {
-      next_lock_needed(&lock -> holder -> neededLock);
+    /* Go down the rabbithole and get to the thread that is not 
+       waiting on any lock */
+    if (&lock -> holder -> neededLock.is_not_null) {
+      next_lock_needed (&lock -> holder -> neededLock);
     }
-    // donate priority
+    // This should be the next lowest lock holder.
     struct thread *low_lock = lock->holder;
-    // Turn on donation mode
+    // TODO: /*Turn on donation mode*/ how to make this technique work...
     thread_current ()->current_dono = 1;
+    // Set this lock holder's priority to curr thread's priority.
     low_lock->priority = thread_get_priority();
     return;
     
