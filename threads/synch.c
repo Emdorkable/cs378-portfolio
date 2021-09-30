@@ -205,6 +205,7 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
   lock->priority = PRI_DEFAULT;
   lock->is_not_null = 0;
+  lock->isntChain = 1;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -248,6 +249,7 @@ lock_acquire (struct lock *lock)
        the lower lock holders */
     t_curr->neededLock = *lock;
     t_curr->neededLock.is_not_null = 1;
+    lock -> isntChain = 0;
     next_lock_needed (lock);
     /* If the curr thread priority has increased, set it to reflect change */
     if (lock->priority < t_curr->priority)
@@ -274,7 +276,7 @@ static void
 next_lock_needed(struct lock *lock) {
     /* Go down the rabbithole and get to the thread that is not 
        waiting on any lock. */
-    if (lock->holder->neededLock.is_not_null) {
+    if (lock->holder->neededLock.is_not_null == 1) {
       next_lock_needed (&lock->holder->neededLock);
     }
     // This should be the next lowest lock holder.
@@ -340,10 +342,17 @@ lock_release (struct lock *lock)
       /* It needs to return to its previous donated priority, set it to
          the next highest lock holder priority */
       list_sort(&(t_curr->all_locks_held), sort_lock_priority, NULL);
+
+      // if the lock is part of a chain, don't set priority
+      if(lock -> isntChain == 0)
+      {
       struct lock *next_highest_lock = list_entry(list_front(&(t_curr->all_locks_held)), struct lock, lock_elem);
       t_curr->priority = next_highest_lock->priority;
+      }
+  
     }
   }
+  lock -> isntChain = 1;
   sema_up (&lock->semaphore);
 }
 

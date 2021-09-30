@@ -24,7 +24,8 @@ struct lock
     struct semaphore semaphore; /* Binary semaphore controlling access. */
     struct list_elem lock_elem; /*lock elem */
     int priority;               /* Lock's priority, i.e priority of thread holding it */
-    bool is_not_null;
+    bool is_not_null;           /* Makrs if the lock is or is not null */
+    bool isntChain;             /* marks if the lock is part of a chain */
   };
 
 void lock_init (struct lock *);
