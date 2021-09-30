@@ -133,6 +133,8 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
   {
+    /* Sort the waiters list in case any have been donated priority to */
+    list_sort(&sema->waiters, sort_priority, NULL);
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
@@ -240,12 +242,12 @@ lock_acquire (struct lock *lock)
     lock->priority = t_curr->priority;
 
   // DanThy and Emily are driving here
-  if (lock->holder != NULL && lock->holder->priority < t_curr->priority){
+  // If the lock has a holder and that holder's priority is less than curr...
+  if (lock->holder && lock->holder->priority < t_curr->priority) {
+    /* Set our needed lock for current thread & donate priority along to
+       the lower lock holders */
     t_curr->neededLock = *lock;
     t_curr->neededLock.is_not_null = 1;
-    /* TODO: so do you pass in the lock's holder or the lock itself??
-       next_lock_needed() takes in a lock struct, not a thread struct...(?)
-       not sure who passed in the holder lols. */
     next_lock_needed (lock);
     /* If the curr thread priority has increased, set it to reflect change */
     if (lock->priority < t_curr->priority)
@@ -253,25 +255,25 @@ lock_acquire (struct lock *lock)
   }
 
   /* I think you *would* want to yield here, since after potentially 
-     having donated the thread's priority, you want to move on to the next one
-     priority-donate-nest fail MAYBE has to do with how same priority threads are in list?? */
+     having donated the thread's priority, you want to move on to the next one */
   thread_yield (); // original code
   sema_down (&lock->semaphore); // original code
   lock->holder = t_curr; //original code
 
   /* Add lock to thread_current's list in lock priority order */
-  // list_push_front (&thread_current() -> all_locks_held, &lock->lock_elem); // Previous 
   list_insert_ordered(&(t_curr->all_locks_held), &(lock->lock_elem), sort_lock_priority, NULL);
 
   t_curr->neededLock.is_not_null = 0;
   intr_set_level (old_level);  //original code
 }
 
+/* Finds out which thread holds lock needed by current thread 
+   and possibly the holder's needed lock as well, passing along 
+   the current thread's priority along to donate. */
 static void
 next_lock_needed(struct lock *lock) {
     /* Go down the rabbithole and get to the thread that is not 
-       waiting on any lock. NOTE: whoever did the ampersand for the 
-       .is_not_null... it wasn't needed lols */
+       waiting on any lock. */
     if (lock->holder->neededLock.is_not_null) {
       next_lock_needed (&lock->holder->neededLock);
     }
@@ -340,7 +342,6 @@ lock_release (struct lock *lock)
       struct lock *next_highest_lock = list_entry(list_front(&(t_curr->all_locks_held)), struct lock, lock_elem);
       t_curr->priority = next_highest_lock->priority;
     }
-    // Otherwise do nothing because it needs to keep releasing locks from the thread 
   }
   sema_up (&lock->semaphore);
 }
@@ -355,14 +356,13 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem 
-  {
-    struct list_elem elem;              /* List element. */
-    struct semaphore semaphore;         /* This semaphore. */
-  };
-
+{
+  struct list_elem elem;              /* List element. */
+  struct semaphore semaphore;         /* This semaphore. */
+};
 
 static bool 
 sort_sem_priority (const struct list_elem *first, const struct list_elem *second, void *aux UNUSED) 
