@@ -279,8 +279,8 @@ next_lock_needed(struct lock *lock) {
     }
     // This should be the next lowest lock holder.
     struct thread *low_lock = lock->holder;
-    // TODO: /*Turn on donation mode*/ how to make this technique work...
-    thread_current ()->current_dono = 1;
+    // Set the donation status of the lower locks to true
+    low_lock->current_dono = 1;
     // Set this lock holder's priority to curr thread's priority.
     low_lock->priority = thread_get_priority();
     return;
@@ -327,14 +327,15 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
   // Remove the lock from list of locks held from thread.
   list_remove (&lock->lock_elem);
-  // Turn off donation mode.
-  t_curr->current_dono = 0;
   
   // If the curr thread has been donated priority...
   if (t_curr->orig_priority != t_curr->priority) {
     // Check if there were other donations made.
-    if (list_empty (&(t_curr->all_locks_held)))
+    if (list_empty (&(t_curr->all_locks_held))) {
       t_curr->priority = t_curr->orig_priority;
+      // Turn off donation mode.
+      t_curr->current_dono = 0;
+    }
     else {
       /* It needs to return to its previous donated priority, set it to
          the next highest lock holder priority */
