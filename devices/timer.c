@@ -24,9 +24,6 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
-// struct semaphore
-
-
 /* List of processes in THREAD_BLOCKED state, that is, processes
    that are waiting for an event/resource/interrupt to end.*/
 static struct list wait_list;
@@ -94,13 +91,21 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-
+//DanThy and Emily drove here
+/*
+  Compares the first elem's thread priority to the second elem's thread priority
+  and returns true if the first is larger
+*/
 static bool
-sort_priority(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED)
+sort_priority(const struct list_elem *first, const struct list_elem *second,
+                                                              void *aux UNUSED)
 {
-
- const struct thread *first_thread = list_entry(first, const struct thread, elem);
- const struct thread *second_thread = list_entry(second, const struct thread, elem);
+//calls thread from elem
+ const struct thread *first_thread = list_entry(first, 
+                                                    const struct thread, elem);
+ const struct thread *second_thread = list_entry(second,
+                                                    const struct thread, elem);
+//compares and returns
  return first_thread -> priority >= second_thread -> priority; 
  
 }
@@ -110,18 +115,15 @@ sort_priority(const struct list_elem *first, const struct list_elem *second, voi
 void
 timer_sleep (int64_t ticks) 
 { 
-  //DanThy is Driving here
-  //test for negative ticks
+  // DanThy is Driving here
+  // Test for negative ticks
   if (ticks <  0)
     return;
 
   // Initiate the thread
-
   struct thread *curr = thread_current ();
   list_insert_ordered (&wait_list, &(curr->timerElem),
                      &sort_priority, curr->priority);
-  //how to use sort_priority?
-  //list_push_back (&wait_list, &curr->timerElem);
   
   curr->timer = ticks + timer_ticks ();
   // Sleeps the thread
@@ -205,29 +207,25 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  //increases ticks
+  // Increases ticks
   thread_tick ();
   ticks++;
   
-  //DanThy is driving here
-  //checks if list is empty
+  // DanThy is driving here
+  // Checks if list is empty
   if (!list_empty (&wait_list)) {
     struct list_elem *curr_elem; 
 
-    //loops through list and checks if any have surpassed timer
+    // Loops through list and checks if any have surpassed timer
     for (curr_elem = list_begin (&wait_list); curr_elem != list_end 
     (&wait_list); curr_elem = list_next (curr_elem))
     {
       struct thread *curr_thread = list_entry (curr_elem, struct thread, 
       timerElem); 
       // Emily Drove here
-      /**
-       * TODO: thoughts - wake up highest priority first (even if it isn't 
-       * the first to wake up) (??) ((this is for priority-sema and priority-condVar))
-       */
       if ((int64_t) curr_thread->timer <= timer_ticks())
       {
-        //removes if timer has passed 
+        // Removes if timer has passed 
         list_remove (curr_elem); 
         sema_up (&curr_thread->is_awake);
         if (curr_elem == list_end (&wait_list)) {

@@ -91,22 +91,16 @@ void
 thread_init (void) 
 {
   ASSERT (intr_get_level () == INTR_OFF);
-
-  //makes sure that thread_current() won't be called
-  
-  //sema_down (&init_lock.semaphore);
+ 
   lock_init (&tid_lock);
-  
   list_init (&ready_list);
   list_init (&all_list);
-
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-  //sema_up (&init_lock.semaphore);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -117,7 +111,6 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  //lock_init (&init_lock);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
@@ -227,13 +220,22 @@ thread_create (const char *name, int priority,
   return tid;
 }
 
+//DanThy drove here
+/*
+  Compares the first elem's thread priority to the second elem's thread priority
+  and returns true if the first elem's is bigger
+*/
 
 static bool
-sort_priority(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED)
+sort_priority (const struct list_elem *first, const struct list_elem *second,
+                                                              void *aux UNUSED)
 {
-
- const struct thread *first_thread = list_entry(first, const struct thread, elem);
- const struct thread *second_thread = list_entry(second, const struct thread, elem);
+  //creates the thread from the elems
+ const struct thread *first_thread = list_entry
+                                            (first, const struct thread, elem);
+ const struct thread *second_thread = list_entry
+                                            (second, const struct thread, elem);
+  //compares and returns
  return first_thread -> priority > second_thread -> priority; 
 }
 
@@ -274,7 +276,6 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered (&ready_list, &(t->elem),
                      &sort_priority, NULL);
-  //list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
   
@@ -293,8 +294,6 @@ thread_name (void)
 struct thread *
 thread_current (void) 
 {
-
-  //sema_down(&init_lock.semaphore);
   struct thread *t = running_thread ();
   
   /* Make sure T is really a thread.
@@ -350,7 +349,6 @@ thread_yield (void)
   if (cur != idle_thread) 
     list_insert_ordered (&ready_list, &(cur->elem),
                      &sort_priority, NULL);
-    //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -373,6 +371,8 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+
+// Everyone drove here
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 

@@ -99,7 +99,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct list_elem timerElem;
+    struct list_elem timerElem;         /* timer element for timer.c */
 
     int current_dono;                  /* Sets donation status */
 
